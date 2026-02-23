@@ -25,6 +25,7 @@
             <h2>Inventarios</h2>
             <span id="inventoryPanelState">Expandido</span>
           </div>
+          <p id="inventoryCollapsedLabel" class="inventory-collapsed-label">inventarios</p>
           <form id="inventoryForm" class="stack">
             <label for="inventoryName">Nuevo inventario</label>
             <div class="row">
@@ -40,8 +41,8 @@
 
         <section class="panel glass content">
           <div class="content-head">
-            <h2 id="activeInventoryName">Selecciona un inventario</h2>
-            <button id="addFieldBtnInline" type="button" class="ghost-btn">Agregar campo</button>
+            <h2 id="activeInventoryName" class="inventory-title-centered">Selecciona un inventario</h2>
+            <button id="addFieldBtnInline" type="button" class="ghost-btn">Agregar columna</button>
           </div>
 
           <div class="tools-row">
@@ -109,15 +110,22 @@
             <div id="movementHistory" class="movement-list"></div>
           </article>
         </div>
+        <article class="dash-card dash-footer">
+          <h3>Historial general (todos los inventarios)</h3>
+          <div id="globalMovementHistory" class="movement-list"></div>
+        </article>
       </section>
     </main>
 
     <template id="inventoryItemTemplate">
       <li>
-        <button type="button" class="inventory-pill">
-          <span class="name"></span>
-          <span class="meta"></span>
-        </button>
+        <div class="inventory-row">
+          <button type="button" class="inventory-pill">
+            <span class="name"></span>
+            <span class="meta"></span>
+          </button>
+          <button type="button" class="inventory-edit-btn" aria-label="Editar inventario">✎</button>
+        </div>
       </li>
     </template>
 

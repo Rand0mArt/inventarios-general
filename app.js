@@ -20,7 +20,6 @@ const state = {
   searchQuery: "",
   draggedItemId: null,
   draggedInventoryId: null,
-  inventoryLongPressTimer: null,
   configDraftFields: [],
 };
 
@@ -100,6 +99,7 @@ const refs = {
   topProductsChart: document.getElementById("topProductsChart"),
   movementSummary: document.getElementById("movementSummary"),
   movementHistory: document.getElementById("movementHistory"),
+  globalMovementHistory: document.getElementById("globalMovementHistory"),
 };
 
 init();
@@ -215,7 +215,7 @@ function bindEvents() {
   refs.inventoryPanelToggle.addEventListener("click", () => {
     refs.mainLayout.classList.toggle("inventory-collapsed");
     const isCollapsed = refs.mainLayout.classList.contains("inventory-collapsed");
-    refs.inventoryPanelState.textContent = isCollapsed ? "Colapsado" : "Expandido";
+    refs.inventoryPanelState.textContent = isCollapsed ? "" : "Expandido";
   });
 
   refs.addFieldBtnInline.addEventListener("click", openConfigDialog);
@@ -508,7 +508,8 @@ function renderInventoryList() {
   for (const inventory of state.inventories) {
     const fragment = refs.inventoryItemTemplate.content.cloneNode(true);
     const li = fragment.querySelector("li");
-    const button = fragment.querySelector("button");
+    const button = fragment.querySelector(".inventory-pill");
+    const editButton = fragment.querySelector(".inventory-edit-btn");
     const name = fragment.querySelector(".name");
     const meta = fragment.querySelector(".meta");
 
@@ -533,29 +534,15 @@ function renderInventoryList() {
       button.classList.add("active");
     }
 
-    let longPressFired = false;
-    const startPress = () => {
-      clearTimeout(state.inventoryLongPressTimer);
-      longPressFired = false;
-      state.inventoryLongPressTimer = setTimeout(() => {
-        longPressFired = true;
-        state.activeInventoryId = inventory.id;
-        openEditInventoryDialog(inventory);
-      }, 500);
-    };
-
-    const cancelPress = () => {
-      clearTimeout(state.inventoryLongPressTimer);
-    };
-
-    button.addEventListener("pointerdown", startPress);
-    button.addEventListener("pointerup", cancelPress);
-    button.addEventListener("pointerleave", cancelPress);
     button.addEventListener("click", () => {
-      if (longPressFired) return;
       state.activeInventoryId = inventory.id;
       persist();
       renderAll();
+    });
+
+    editButton.addEventListener("click", () => {
+      state.activeInventoryId = inventory.id;
+      openEditInventoryDialog(inventory);
     });
 
     refs.inventoryList.appendChild(fragment);
@@ -595,6 +582,9 @@ function renderActiveInventory() {
   refs.editInventoryColor.value = normalizeColor(active.color);
   refs.editInventoryImage.value = "";
   refs.skuPreview.textContent = previewSku(active);
+  if (!active.customFields || active.customFields.length === 0) {
+    refs.skuPreview.textContent = "Sin columnas. Usa Agregar columna.";
+  }
 
   const filteredItems = active.items.filter((item) => {
     if (!state.searchQuery) return true;
@@ -678,6 +668,7 @@ function renderDashboard(previewItems = null) {
     renderBarChart(refs.topProductsChart, [], (value) => toCurrency(value));
     refs.movementSummary.innerHTML = "";
     refs.movementHistory.innerHTML = '<div class="empty">Sin movimientos aún.</div>';
+    renderGlobalMovementHistory();
     return;
   }
 
@@ -732,6 +723,44 @@ function renderDashboard(previewItems = null) {
       })
       .join("");
   }
+
+  renderGlobalMovementHistory();
+}
+
+function renderGlobalMovementHistory() {
+  const rows = state.inventories
+    .flatMap((inventory) =>
+      (inventory.movementLog || []).map((move) => ({
+        inventoryName: inventory.name,
+        inventoryColor: inventory.color,
+        inventoryImage: inventory.imageDataUrl,
+        itemName: move.itemName || "Producto",
+        delta: Number(move.delta) || 0,
+        date: move.date || new Date().toISOString(),
+      })),
+    )
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  if (rows.length === 0) {
+    refs.globalMovementHistory.innerHTML = '<div class="empty">Sin movimientos globales aún.</div>';
+    return;
+  }
+
+  refs.globalMovementHistory.innerHTML = rows
+    .slice(0, 20)
+    .map((row) => {
+      const sign = row.delta >= 0 ? "+" : "-";
+      const dotStyle = row.inventoryImage
+        ? `background-image:url(${row.inventoryImage}); background-color:transparent;`
+        : `background-color:${row.inventoryColor};`;
+
+      return `<div class="movement-item general"><span class="movement-dot" style="${dotStyle}"></span><div><strong>${escapeHtml(
+        row.inventoryName,
+      )}</strong> · ${escapeHtml(row.itemName)} · ${sign}${Math.abs(row.delta)} · ${escapeHtml(
+        formatDateTime(row.date),
+      )}</div></div>`;
+    })
+    .join("");
 }
 
 function renderDashboardPreview(mode) {
