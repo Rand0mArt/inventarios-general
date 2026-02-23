@@ -21,7 +21,10 @@
     <main class="app-shell">
       <section id="mainLayout" class="layout-grid">
         <aside id="inventoryPanel" class="panel glass">
-          <h2>Inventarios</h2>
+          <div id="inventoryPanelToggle" class="inventory-panel-head">
+            <h2>Inventarios</h2>
+            <span id="inventoryPanelState">Expandido</span>
+          </div>
           <form id="inventoryForm" class="stack">
             <label for="inventoryName">Nuevo inventario</label>
             <div class="row">
@@ -38,34 +41,17 @@
         <section class="panel glass content">
           <div class="content-head">
             <h2 id="activeInventoryName">Selecciona un inventario</h2>
-            <form id="inventorySettingsForm" class="inventory-settings">
-              <div>
-                <label for="editInventoryName">Nombre</label>
-                <input id="editInventoryName" type="text" placeholder="Nombre del inventario" />
-              </div>
-              <div>
-                <label for="editInventoryColor">Color</label>
-                <input id="editInventoryColor" type="color" />
-              </div>
-              <div>
-                <label for="editInventoryImage">Foto</label>
-                <input id="editInventoryImage" type="file" accept="image/*" />
-              </div>
-              <button type="submit">Guardar</button>
-              <button id="removeInventoryImageBtn" class="ghost-btn" type="button">Quitar foto</button>
-              <button id="deleteInventoryBtn" class="danger" type="button">Eliminar</button>
-            </form>
+            <button id="addFieldBtnInline" type="button" class="ghost-btn">Agregar campo</button>
           </div>
 
           <div class="tools-row">
-            <button id="toggleInventoryPanelBtn" type="button" class="ghost-btn">Ocultar inventarios</button>
             <input id="searchInput" type="search" placeholder="Buscar producto o SKU..." />
-            <button id="manageFieldsBtn" type="button">Campos personalizados</button>
+            <button id="manageFieldsBtn" type="button">Configurar campos</button>
           </div>
 
           <div class="add-product-bar">
             <p id="skuPreview" class="sku-preview">Se generará al agregar.</p>
-            <button id="openAddProductBtn" type="button">Agregar producto</button>
+            <button id="openAddProductBtn" type="button" class="plus-btn">+ Agregar producto</button>
           </div>
 
           <div class="table-wrap">
@@ -116,6 +102,11 @@
           <article class="dash-card">
             <h3>Top productos por valor</h3>
             <div id="topProductsChart" class="bar-chart"></div>
+          </article>
+          <article class="dash-card">
+            <h3>Historial (Entradas/Salidas)</h3>
+            <div id="movementSummary" class="movement-summary"></div>
+            <div id="movementHistory" class="movement-list"></div>
           </article>
         </div>
       </section>
@@ -207,6 +198,30 @@
         <div class="dialog-actions">
           <button id="cancelConfigBtn" type="button" class="ghost-btn">Cancelar</button>
           <button type="submit">Guardar configuración</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="editInventoryDialog" class="app-dialog">
+      <form id="editInventoryForm" class="dialog-form" method="dialog">
+        <h3>Editar inventario</h3>
+        <div>
+          <label for="editInventoryName">Nombre</label>
+          <input id="editInventoryName" type="text" required />
+        </div>
+        <div>
+          <label for="editInventoryColor">Color</label>
+          <input id="editInventoryColor" type="color" />
+        </div>
+        <div>
+          <label for="editInventoryImage">Foto</label>
+          <input id="editInventoryImage" type="file" accept="image/*" />
+        </div>
+        <div class="dialog-actions">
+          <button id="deleteInventoryBtn" class="danger" type="button">Eliminar</button>
+          <button id="removeInventoryImageBtn" class="ghost-btn" type="button">Quitar foto</button>
+          <button id="cancelEditInventoryBtn" type="button" class="ghost-btn">Cancelar</button>
+          <button type="submit">Guardar</button>
         </div>
       </form>
     </dialog>

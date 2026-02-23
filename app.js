@@ -20,6 +20,7 @@ const state = {
   searchQuery: "",
   draggedItemId: null,
   draggedInventoryId: null,
+  inventoryLongPressTimer: null,
   configDraftFields: [],
 };
 
@@ -35,17 +36,21 @@ const refs = {
   inventoryName: document.getElementById("inventoryName"),
   inventoryColor: document.getElementById("inventoryColor"),
   inventoryImage: document.getElementById("inventoryImage"),
+  inventoryPanelToggle: document.getElementById("inventoryPanelToggle"),
+  inventoryPanelState: document.getElementById("inventoryPanelState"),
   mainLayout: document.getElementById("mainLayout"),
-  toggleInventoryPanelBtn: document.getElementById("toggleInventoryPanelBtn"),
   inventoryList: document.getElementById("inventoryList"),
-  inventorySettingsForm: document.getElementById("inventorySettingsForm"),
+  editInventoryDialog: document.getElementById("editInventoryDialog"),
+  editInventoryForm: document.getElementById("editInventoryForm"),
   editInventoryName: document.getElementById("editInventoryName"),
   editInventoryColor: document.getElementById("editInventoryColor"),
   editInventoryImage: document.getElementById("editInventoryImage"),
   removeInventoryImageBtn: document.getElementById("removeInventoryImageBtn"),
+  cancelEditInventoryBtn: document.getElementById("cancelEditInventoryBtn"),
   activeInventoryName: document.getElementById("activeInventoryName"),
   deleteInventoryBtn: document.getElementById("deleteInventoryBtn"),
   searchInput: document.getElementById("searchInput"),
+  addFieldBtnInline: document.getElementById("addFieldBtnInline"),
   manageFieldsBtn: document.getElementById("manageFieldsBtn"),
   openAddProductBtn: document.getElementById("openAddProductBtn"),
   addProductDialog: document.getElementById("addProductDialog"),
@@ -93,6 +98,8 @@ const refs = {
   valueChart: document.getElementById("valueChart"),
   unitsChart: document.getElementById("unitsChart"),
   topProductsChart: document.getElementById("topProductsChart"),
+  movementSummary: document.getElementById("movementSummary"),
+  movementHistory: document.getElementById("movementHistory"),
 };
 
 init();
@@ -118,6 +125,7 @@ function bindEvents() {
       color: normalizeColor(refs.inventoryColor.value || pickColor()),
       imageDataUrl: sanitizeImageDataUrl(imageDataUrl),
       items: [],
+      movementLog: [],
       nextSku: 1,
       labels: { ...DEFAULT_LABELS },
       customFields: [],
@@ -133,8 +141,9 @@ function bindEvents() {
     renderAll();
   });
 
-  refs.inventorySettingsForm.addEventListener("submit", (event) => {
+  refs.editInventoryForm.addEventListener("submit", (event) => {
     event.preventDefault();
+    closeDialog(refs.editInventoryDialog);
   });
 
   refs.editInventoryName.addEventListener("input", () => {
@@ -183,6 +192,8 @@ function bindEvents() {
     renderAll();
   });
 
+  refs.cancelEditInventoryBtn.addEventListener("click", () => closeDialog(refs.editInventoryDialog));
+
   refs.deleteInventoryBtn.addEventListener("click", () => {
     const active = getActiveInventory();
     if (!active) return;
@@ -201,12 +212,13 @@ function bindEvents() {
     renderActiveInventory();
   });
 
-  refs.toggleInventoryPanelBtn.addEventListener("click", () => {
+  refs.inventoryPanelToggle.addEventListener("click", () => {
     refs.mainLayout.classList.toggle("inventory-collapsed");
     const isCollapsed = refs.mainLayout.classList.contains("inventory-collapsed");
-    refs.toggleInventoryPanelBtn.textContent = isCollapsed ? "Mostrar inventarios" : "Ocultar inventarios";
+    refs.inventoryPanelState.textContent = isCollapsed ? "Colapsado" : "Expandido";
   });
 
+  refs.addFieldBtnInline.addEventListener("click", openConfigDialog);
   refs.manageFieldsBtn.addEventListener("click", openConfigDialog);
 
   refs.tableConfigForm.addEventListener("submit", (event) => {
@@ -290,6 +302,8 @@ function bindEvents() {
       movements: [{ date: now, delta: Math.max(0, quantity) }],
       createdAt: now,
     });
+    active.movementLog = Array.isArray(active.movementLog) ? active.movementLog : [];
+    active.movementLog.push({ itemName: name, delta: Math.max(0, quantity), date: now });
 
     closeDialog(refs.addProductDialog);
     persist();
@@ -355,6 +369,8 @@ function bindEvents() {
     if (delta !== 0) {
       item.movements = Array.isArray(item.movements) ? item.movements : [];
       item.movements.push({ date: new Date().toISOString(), delta });
+      active.movementLog = Array.isArray(active.movementLog) ? active.movementLog : [];
+      active.movementLog.push({ itemName: item.name, delta, date: new Date().toISOString() });
     }
 
     closeDialog(refs.editProductDialog);
@@ -373,6 +389,10 @@ function bindEvents() {
     const ok = confirm(`¿Quitar "${item.name}" de este inventario?`);
     if (!ok) return;
 
+    active.movementLog = Array.isArray(active.movementLog) ? active.movementLog : [];
+    if (item.quantity > 0) {
+      active.movementLog.push({ itemName: item.name, delta: -item.quantity, date: new Date().toISOString() });
+    }
     active.items = active.items.filter((entry) => entry.id !== itemId);
     closeDialog(refs.editProductDialog);
     persist();
@@ -513,7 +533,26 @@ function renderInventoryList() {
       button.classList.add("active");
     }
 
+    let longPressFired = false;
+    const startPress = () => {
+      clearTimeout(state.inventoryLongPressTimer);
+      longPressFired = false;
+      state.inventoryLongPressTimer = setTimeout(() => {
+        longPressFired = true;
+        state.activeInventoryId = inventory.id;
+        openEditInventoryDialog(inventory);
+      }, 500);
+    };
+
+    const cancelPress = () => {
+      clearTimeout(state.inventoryLongPressTimer);
+    };
+
+    button.addEventListener("pointerdown", startPress);
+    button.addEventListener("pointerup", cancelPress);
+    button.addEventListener("pointerleave", cancelPress);
     button.addEventListener("click", () => {
+      if (longPressFired) return;
       state.activeInventoryId = inventory.id;
       persist();
       renderAll();
@@ -533,10 +572,9 @@ function renderActiveInventory() {
     renderTableHeaders(DEFAULT_LABELS);
     refs.activeInventoryName.textContent = "Selecciona un inventario";
     refs.openAddProductBtn.disabled = true;
-    refs.inventorySettingsForm.style.opacity = "0.45";
-    refs.inventorySettingsForm.style.pointerEvents = "none";
     refs.deleteInventoryBtn.disabled = true;
     refs.manageFieldsBtn.disabled = true;
+    refs.addFieldBtnInline.disabled = true;
     refs.removeInventoryImageBtn.disabled = true;
     refs.skuPreview.textContent = "Se generará al agregar.";
     refs.itemsTableBody.innerHTML = '<tr><td class="empty" colspan="6">No hay inventario activo.</td></tr>';
@@ -547,10 +585,9 @@ function renderActiveInventory() {
   applyInventoryBackground(active.imageDataUrl || null);
   renderTableHeaders(active.labels || DEFAULT_LABELS);
   refs.openAddProductBtn.disabled = false;
-  refs.inventorySettingsForm.style.opacity = "1";
-  refs.inventorySettingsForm.style.pointerEvents = "auto";
   refs.deleteInventoryBtn.disabled = false;
   refs.manageFieldsBtn.disabled = false;
+  refs.addFieldBtnInline.disabled = false;
   refs.removeInventoryImageBtn.disabled = !Boolean(active.imageDataUrl);
 
   refs.activeInventoryName.textContent = active.name;
@@ -639,6 +676,8 @@ function renderDashboard(previewItems = null) {
     renderBarChart(refs.valueChart, [], (value) => toCurrency(value));
     renderBarChart(refs.unitsChart, [], (value) => `${value} uds`);
     renderBarChart(refs.topProductsChart, [], (value) => toCurrency(value));
+    refs.movementSummary.innerHTML = "";
+    refs.movementHistory.innerHTML = '<div class="empty">Sin movimientos aún.</div>';
     return;
   }
 
@@ -664,6 +703,35 @@ function renderDashboard(previewItems = null) {
   renderBarChart(refs.valueChart, valueRows, (value) => toCurrency(value));
   renderBarChart(refs.unitsChart, unitsRows, (value) => `${value} uds`);
   renderBarChart(refs.topProductsChart, topProducts, (value) => toCurrency(value));
+
+  const movements = (active.movementLog || [])
+    .map((move) => ({
+      itemName: move.itemName || "Producto",
+      delta: Number(move.delta) || 0,
+      date: move.date || new Date().toISOString(),
+    }))
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  const totalEntries = movements.reduce((sum, move) => sum + (move.delta > 0 ? move.delta : 0), 0);
+  const totalExits = movements.reduce((sum, move) => sum + (move.delta < 0 ? Math.abs(move.delta) : 0), 0);
+  refs.movementSummary.innerHTML = `
+    <div class="movement-badge"><strong>Entradas:</strong> ${totalEntries}</div>
+    <div class="movement-badge"><strong>Salidas:</strong> ${totalExits}</div>
+  `;
+
+  if (movements.length === 0) {
+    refs.movementHistory.innerHTML = '<div class="empty">Sin movimientos aún.</div>';
+  } else {
+    refs.movementHistory.innerHTML = movements
+      .slice(0, 12)
+      .map((move) => {
+        const sign = move.delta >= 0 ? "+" : "-";
+        return `<div class="movement-item"><strong>${escapeHtml(move.itemName)}</strong> · ${sign}${Math.abs(move.delta)} · ${escapeHtml(
+          formatDateTime(move.date),
+        )}</div>`;
+      })
+      .join("");
+  }
 }
 
 function renderDashboardPreview(mode) {
@@ -781,6 +849,14 @@ function openEditProductDialog(inventory, item) {
 
   renderDynamicFields(inventory.customFields, refs.editDynamicFieldsContainer, item.dynamicValues || {}, "edit");
   openDialog(refs.editProductDialog);
+}
+
+function openEditInventoryDialog(inventory) {
+  refs.editInventoryName.value = inventory.name;
+  refs.editInventoryColor.value = normalizeColor(inventory.color);
+  refs.editInventoryImage.value = "";
+  refs.removeInventoryImageBtn.disabled = !Boolean(inventory.imageDataUrl);
+  openDialog(refs.editInventoryDialog);
 }
 
 function prepareAddProductDialog(inventory) {
@@ -1028,6 +1104,15 @@ function normalizeInventory(inventory, index) {
     name: inventory.name || `Inventario ${index + 1}`,
     color,
     imageDataUrl: sanitizeImageDataUrl(inventory.imageDataUrl),
+    movementLog: Array.isArray(inventory.movementLog)
+      ? inventory.movementLog
+          .map((move) => ({
+            itemName: keepText(move.itemName, "Producto"),
+            delta: Number(move.delta) || 0,
+            date: move.date || new Date().toISOString(),
+          }))
+          .filter((move) => !Number.isNaN(new Date(move.date).getTime()))
+      : [],
     labels,
     customFields,
     nextSku: Math.max(1, nextSku),
@@ -1225,6 +1310,18 @@ function parseAccountingNumber(value) {
     .replace(/\((.*)\)/, "-$1");
   const parsed = Number.parseFloat(clean);
   return Number.isNaN(parsed) ? Number.NaN : parsed;
+}
+
+function formatDateTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return new Intl.DateTimeFormat("es-MX", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
 }
 
 function keepText(value, fallback) {

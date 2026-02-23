@@ -92,11 +92,32 @@ body::after {
 }
 
 .layout-grid.inventory-collapsed {
-  grid-template-columns: 1fr;
+  grid-template-columns: 96px 1fr;
 }
 
 .layout-grid.inventory-collapsed #inventoryPanel {
+  overflow: hidden;
+}
+
+.layout-grid.inventory-collapsed #inventoryPanel .stack,
+.layout-grid.inventory-collapsed #inventoryPanel .inventory-list {
   display: none;
+}
+
+.inventory-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.3rem 0.2rem 0.7rem;
+  cursor: pointer;
+}
+
+.inventory-panel-head span {
+  color: var(--ink-soft);
+  font-size: 0.76rem;
+  border: 1px solid rgba(149, 192, 250, 0.2);
+  border-radius: 999px;
+  padding: 0.16rem 0.55rem;
 }
 
 .glass {
@@ -316,13 +337,6 @@ button:disabled {
   margin-bottom: 0.7rem;
 }
 
-.inventory-settings {
-  display: grid;
-  grid-template-columns: 1fr auto auto auto auto auto;
-  gap: 0.5rem;
-  align-items: end;
-}
-
 .tools-row {
   margin-top: 0.75rem;
   display: flex;
@@ -335,6 +349,13 @@ button:disabled {
   display: flex;
   gap: 0.6rem;
   align-items: center;
+}
+
+.plus-btn {
+  font-size: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 16px;
+  box-shadow: 0 14px 28px rgba(56, 121, 255, 0.35);
 }
 
 .dynamic-fields {
@@ -468,6 +489,41 @@ tbody tr.drop-target {
 .dash-card h3 {
   margin: 0 0 0.55rem;
   font-size: 0.92rem;
+}
+
+.movement-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+  margin-bottom: 0.5rem;
+}
+
+.movement-badge {
+  border: 1px solid rgba(149, 192, 250, 0.2);
+  border-radius: 12px;
+  padding: 0.45rem 0.55rem;
+  background: rgba(18, 29, 71, 0.62);
+  font-size: 0.8rem;
+}
+
+.movement-list {
+  max-height: 220px;
+  overflow: auto;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.movement-item {
+  border: 1px solid rgba(149, 192, 250, 0.18);
+  border-radius: 10px;
+  padding: 0.45rem 0.55rem;
+  background: rgba(22, 34, 82, 0.5);
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}
+
+.movement-item strong {
+  color: var(--ink);
 }
 
 .bar-chart {
@@ -605,10 +661,6 @@ tbody tr.drop-target {
   .kpi-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-
-  .inventory-settings {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 700px) {
@@ -638,10 +690,6 @@ tbody tr.drop-target {
   .content-head {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .inventory-settings {
-    grid-template-columns: 1fr;
   }
 
   .dialog-grid,
