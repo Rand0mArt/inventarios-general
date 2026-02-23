@@ -19,8 +19,8 @@
     <div class="bg-layer bg-layer-2"></div>
 
     <main class="app-shell">
-      <section class="layout-grid">
-        <aside class="panel glass">
+      <section id="mainLayout" class="layout-grid">
+        <aside id="inventoryPanel" class="panel glass">
           <h2>Inventarios</h2>
           <form id="inventoryForm" class="stack">
             <label for="inventoryName">Nuevo inventario</label>
@@ -58,30 +58,15 @@
           </div>
 
           <div class="tools-row">
+            <button id="toggleInventoryPanelBtn" type="button" class="ghost-btn">Ocultar inventarios</button>
             <input id="searchInput" type="search" placeholder="Buscar producto o SKU..." />
             <button id="manageFieldsBtn" type="button">Campos personalizados</button>
           </div>
 
-          <form id="itemForm" class="item-form">
-            <div>
-              <label for="itemName">Producto</label>
-              <input id="itemName" type="text" placeholder="Nombre del producto" required />
-            </div>
-            <div>
-              <label>SKU automático</label>
-              <p id="skuPreview" class="sku-preview">Se generará al agregar.</p>
-            </div>
-            <div>
-              <label for="itemQty">Cantidad</label>
-              <input id="itemQty" type="number" min="0" value="0" required />
-            </div>
-            <div>
-              <label for="itemPrice">Precio</label>
-              <input id="itemPrice" type="number" min="0" step="0.01" value="0" required />
-            </div>
-            <button type="submit">Agregar producto</button>
-          </form>
-          <div id="dynamicFieldsContainer" class="dynamic-fields"></div>
+          <div class="add-product-bar">
+            <p id="skuPreview" class="sku-preview">Se generará al agregar.</p>
+            <button id="openAddProductBtn" type="button">Agregar producto</button>
+          </div>
 
           <div class="table-wrap">
             <table>
@@ -163,7 +148,7 @@
         </div>
         <div>
           <label for="editItemPrice">Precio</label>
-          <input id="editItemPrice" type="number" min="0" step="0.01" required />
+          <input id="editItemPrice" type="text" inputmode="decimal" required />
         </div>
         <div id="editDynamicFieldsContainer" class="dynamic-fields"></div>
         <div class="dialog-actions">
@@ -210,6 +195,11 @@
           <select id="newFieldType">
             <option value="text">Texto</option>
             <option value="number">Número</option>
+            <option value="date">Fecha</option>
+            <option value="tel">Teléfono</option>
+            <option value="time">Hora</option>
+            <option value="duration">Duración</option>
+            <option value="textarea">Texto largo</option>
           </select>
           <button id="addFieldBtn" type="button">Agregar campo</button>
         </div>
@@ -217,6 +207,33 @@
         <div class="dialog-actions">
           <button id="cancelConfigBtn" type="button" class="ghost-btn">Cancelar</button>
           <button type="submit">Guardar configuración</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="addProductDialog" class="app-dialog">
+      <form id="addProductForm" class="dialog-form" method="dialog">
+        <h3>Agregar producto</h3>
+        <div>
+          <label for="addItemName">Nombre</label>
+          <input id="addItemName" type="text" required />
+        </div>
+        <div>
+          <label for="addItemSku">SKU</label>
+          <input id="addItemSku" type="text" />
+        </div>
+        <div>
+          <label for="addItemQty">Cantidad</label>
+          <input id="addItemQty" type="number" min="0" value="0" required />
+        </div>
+        <div>
+          <label for="addItemPrice">Precio</label>
+          <input id="addItemPrice" type="text" inputmode="decimal" value="0.00" required />
+        </div>
+        <div id="addDynamicFieldsContainer" class="dynamic-fields"></div>
+        <div class="dialog-actions">
+          <button id="cancelAddProductBtn" type="button" class="ghost-btn">Cancelar</button>
+          <button type="submit">Guardar</button>
         </div>
       </form>
     </dialog>

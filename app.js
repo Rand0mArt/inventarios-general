@@ -35,6 +35,8 @@ const refs = {
   inventoryName: document.getElementById("inventoryName"),
   inventoryColor: document.getElementById("inventoryColor"),
   inventoryImage: document.getElementById("inventoryImage"),
+  mainLayout: document.getElementById("mainLayout"),
+  toggleInventoryPanelBtn: document.getElementById("toggleInventoryPanelBtn"),
   inventoryList: document.getElementById("inventoryList"),
   inventorySettingsForm: document.getElementById("inventorySettingsForm"),
   editInventoryName: document.getElementById("editInventoryName"),
@@ -45,12 +47,16 @@ const refs = {
   deleteInventoryBtn: document.getElementById("deleteInventoryBtn"),
   searchInput: document.getElementById("searchInput"),
   manageFieldsBtn: document.getElementById("manageFieldsBtn"),
-  itemForm: document.getElementById("itemForm"),
-  itemName: document.getElementById("itemName"),
-  itemQty: document.getElementById("itemQty"),
-  itemPrice: document.getElementById("itemPrice"),
+  openAddProductBtn: document.getElementById("openAddProductBtn"),
+  addProductDialog: document.getElementById("addProductDialog"),
+  addProductForm: document.getElementById("addProductForm"),
+  addItemName: document.getElementById("addItemName"),
+  addItemSku: document.getElementById("addItemSku"),
+  addItemQty: document.getElementById("addItemQty"),
+  addItemPrice: document.getElementById("addItemPrice"),
+  addDynamicFieldsContainer: document.getElementById("addDynamicFieldsContainer"),
+  cancelAddProductBtn: document.getElementById("cancelAddProductBtn"),
   skuPreview: document.getElementById("skuPreview"),
-  dynamicFieldsContainer: document.getElementById("dynamicFieldsContainer"),
   itemsTableBody: document.getElementById("itemsTableBody"),
   thProduct: document.getElementById("thProduct"),
   thSku: document.getElementById("thSku"),
@@ -195,6 +201,12 @@ function bindEvents() {
     renderActiveInventory();
   });
 
+  refs.toggleInventoryPanelBtn.addEventListener("click", () => {
+    refs.mainLayout.classList.toggle("inventory-collapsed");
+    const isCollapsed = refs.mainLayout.classList.contains("inventory-collapsed");
+    refs.toggleInventoryPanelBtn.textContent = isCollapsed ? "Mostrar inventarios" : "Ocultar inventarios";
+  });
+
   refs.manageFieldsBtn.addEventListener("click", openConfigDialog);
 
   refs.tableConfigForm.addEventListener("submit", (event) => {
@@ -227,7 +239,7 @@ function bindEvents() {
 
   refs.addFieldBtn.addEventListener("click", () => {
     const name = refs.newFieldName.value.trim();
-    const type = refs.newFieldType.value === "number" ? "number" : "text";
+    const type = normalizeFieldType(refs.newFieldType.value);
     if (!name) return;
 
     state.configDraftFields.push({ id: crypto.randomUUID(), name, type });
@@ -246,24 +258,32 @@ function bindEvents() {
 
   refs.cancelConfigBtn.addEventListener("click", () => closeDialog(refs.tableConfigDialog));
 
-  refs.itemForm.addEventListener("submit", (event) => {
+  refs.openAddProductBtn.addEventListener("click", () => {
+    const active = getActiveInventory();
+    if (!active) return;
+    prepareAddProductDialog(active);
+    openDialog(refs.addProductDialog);
+  });
+
+  refs.addProductForm.addEventListener("submit", (event) => {
     event.preventDefault();
     const active = getActiveInventory();
     if (!active) return;
 
-    const name = refs.itemName.value.trim();
-    const quantity = Number.parseInt(refs.itemQty.value, 10);
-    const price = Number.parseFloat(refs.itemPrice.value);
+    const name = refs.addItemName.value.trim();
+    const sku = refs.addItemSku.value.trim();
+    const quantity = Number.parseInt(refs.addItemQty.value, 10);
+    const price = parseAccountingNumber(refs.addItemPrice.value);
 
     if (!name || Number.isNaN(quantity) || Number.isNaN(price)) return;
 
-    const dynamicValues = collectDynamicValues(active.customFields, refs.dynamicFieldsContainer, "add");
+    const dynamicValues = collectDynamicValues(active.customFields, refs.addDynamicFieldsContainer, "add");
     const now = new Date().toISOString();
 
     active.items.unshift({
       id: crypto.randomUUID(),
       name,
-      sku: generateSku(active),
+      sku: sku || generateSku(active),
       quantity: Math.max(0, quantity),
       price: Math.max(0, price),
       dynamicValues,
@@ -271,12 +291,23 @@ function bindEvents() {
       createdAt: now,
     });
 
-    refs.itemForm.reset();
-    refs.itemQty.value = "0";
-    refs.itemPrice.value = "0";
-    renderDynamicFields(active.customFields, refs.dynamicFieldsContainer, {}, "add");
+    closeDialog(refs.addProductDialog);
     persist();
     renderAll();
+  });
+
+  refs.cancelAddProductBtn.addEventListener("click", () => {
+    closeDialog(refs.addProductDialog);
+    renderWidgets();
+    renderDashboard();
+  });
+  refs.addProductDialog.addEventListener("close", () => {
+    renderWidgets();
+    renderDashboard();
+  });
+
+  refs.addProductForm.addEventListener("input", () => {
+    renderDashboardPreview("add");
   });
 
   refs.itemsTableBody.addEventListener("click", (event) => {
@@ -306,7 +337,7 @@ function bindEvents() {
     const name = refs.editItemName.value.trim();
     const sku = refs.editItemSku.value.trim();
     const quantity = Number.parseInt(refs.editItemQty.value, 10);
-    const price = Number.parseFloat(refs.editItemPrice.value);
+    const price = parseAccountingNumber(refs.editItemPrice.value);
 
     if (!name || Number.isNaN(quantity) || Number.isNaN(price)) {
       alert("Completa todos los campos del producto con valores válidos.");
@@ -349,6 +380,19 @@ function bindEvents() {
   });
 
   refs.cancelEditProductBtn.addEventListener("click", () => closeDialog(refs.editProductDialog));
+  refs.editProductDialog.addEventListener("close", () => {
+    renderWidgets();
+    renderDashboard();
+  });
+  refs.editProductForm.addEventListener("input", () => renderDashboardPreview("edit"));
+  refs.editItemPrice.addEventListener("blur", () => {
+    const numeric = parseAccountingNumber(refs.editItemPrice.value);
+    refs.editItemPrice.value = Number.isNaN(numeric) ? "0.00" : toAccountingNumber(numeric);
+  });
+  refs.addItemPrice.addEventListener("blur", () => {
+    const numeric = parseAccountingNumber(refs.addItemPrice.value);
+    refs.addItemPrice.value = Number.isNaN(numeric) ? "0.00" : toAccountingNumber(numeric);
+  });
 
   refs.itemsTableBody.addEventListener("dragstart", (event) => {
     const row = event.target.closest("tr[data-id]");
@@ -488,15 +532,13 @@ function renderActiveInventory() {
     applyInventoryBackground(null);
     renderTableHeaders(DEFAULT_LABELS);
     refs.activeInventoryName.textContent = "Selecciona un inventario";
-    refs.itemForm.style.opacity = "0.45";
-    refs.itemForm.style.pointerEvents = "none";
+    refs.openAddProductBtn.disabled = true;
     refs.inventorySettingsForm.style.opacity = "0.45";
     refs.inventorySettingsForm.style.pointerEvents = "none";
     refs.deleteInventoryBtn.disabled = true;
     refs.manageFieldsBtn.disabled = true;
     refs.removeInventoryImageBtn.disabled = true;
     refs.skuPreview.textContent = "Se generará al agregar.";
-    refs.dynamicFieldsContainer.innerHTML = "";
     refs.itemsTableBody.innerHTML = '<tr><td class="empty" colspan="6">No hay inventario activo.</td></tr>';
     return;
   }
@@ -504,8 +546,7 @@ function renderActiveInventory() {
   applyTheme(active.color);
   applyInventoryBackground(active.imageDataUrl || null);
   renderTableHeaders(active.labels || DEFAULT_LABELS);
-  refs.itemForm.style.opacity = "1";
-  refs.itemForm.style.pointerEvents = "auto";
+  refs.openAddProductBtn.disabled = false;
   refs.inventorySettingsForm.style.opacity = "1";
   refs.inventorySettingsForm.style.pointerEvents = "auto";
   refs.deleteInventoryBtn.disabled = false;
@@ -517,8 +558,6 @@ function renderActiveInventory() {
   refs.editInventoryColor.value = normalizeColor(active.color);
   refs.editInventoryImage.value = "";
   refs.skuPreview.textContent = previewSku(active);
-
-  renderDynamicFields(active.customFields, refs.dynamicFieldsContainer, {}, "add");
 
   const filteredItems = active.items.filter((item) => {
     if (!state.searchQuery) return true;
@@ -562,9 +601,9 @@ function renderActiveInventory() {
   }
 }
 
-function renderWidgets() {
+function renderWidgets(previewItems = null) {
   const active = getActiveInventory();
-  const items = active?.items ?? [];
+  const items = previewItems ?? active?.items ?? [];
   const totalValue = items.reduce((sum, item) => sum + item.quantity * item.price, 0);
   const totalUnits = items.reduce((sum, item) => sum + item.quantity, 0);
   const outOfStock = items.filter((item) => item.quantity === 0).length;
@@ -590,7 +629,7 @@ function renderWidgets() {
   `;
 }
 
-function renderDashboard() {
+function renderDashboard(previewItems = null) {
   const active = getActiveInventory();
   refs.dashboardInventoryTitle.textContent = active
     ? `Métricas de: ${active.name}`
@@ -603,17 +642,18 @@ function renderDashboard() {
     return;
   }
 
-  const valueRows = active.items.map((item) => ({
+  const items = previewItems ?? active.items;
+  const valueRows = items.map((item) => ({
     label: item.name,
     value: item.quantity * item.price,
   }));
 
-  const unitsRows = active.items.map((item) => ({
+  const unitsRows = items.map((item) => ({
     label: item.name,
     value: item.quantity,
   }));
 
-  const topProducts = active.items
+  const topProducts = items
     .map((item) => ({
       label: item.name,
       value: item.quantity * item.price,
@@ -624,6 +664,43 @@ function renderDashboard() {
   renderBarChart(refs.valueChart, valueRows, (value) => toCurrency(value));
   renderBarChart(refs.unitsChart, unitsRows, (value) => `${value} uds`);
   renderBarChart(refs.topProductsChart, topProducts, (value) => toCurrency(value));
+}
+
+function renderDashboardPreview(mode) {
+  const active = getActiveInventory();
+  if (!active) return;
+
+  const previewItems = active.items.map((item) => ({ ...item }));
+
+  if (mode === "add") {
+    const name = refs.addItemName.value.trim() || "Producto nuevo";
+    const quantity = Number.parseInt(refs.addItemQty.value, 10);
+    const price = parseAccountingNumber(refs.addItemPrice.value);
+    if (!Number.isNaN(quantity) && !Number.isNaN(price)) {
+      previewItems.unshift({
+        id: "__preview_add__",
+        name,
+        quantity: Math.max(0, quantity),
+        price: Math.max(0, price),
+      });
+    }
+  } else if (mode === "edit") {
+    const id = refs.editProductId.value;
+    const idx = previewItems.findIndex((item) => item.id === id);
+    if (idx !== -1) {
+      const quantity = Number.parseInt(refs.editItemQty.value, 10);
+      const price = parseAccountingNumber(refs.editItemPrice.value);
+      previewItems[idx] = {
+        ...previewItems[idx],
+        name: refs.editItemName.value.trim() || previewItems[idx].name,
+        quantity: Number.isNaN(quantity) ? previewItems[idx].quantity : Math.max(0, quantity),
+        price: Number.isNaN(price) ? previewItems[idx].price : Math.max(0, price),
+      };
+    }
+  }
+
+  renderWidgets(previewItems);
+  renderDashboard(previewItems);
 }
 
 function renderBarChart(container, rows, formatValue) {
@@ -688,7 +765,7 @@ function renderFieldsList() {
   for (const field of state.configDraftFields) {
     const li = document.createElement("li");
     li.innerHTML = `
-      <span>${escapeHtml(field.name)} <small>(${field.type === "number" ? "Número" : "Texto"})</small></span>
+      <span>${escapeHtml(field.name)} <small>(${escapeHtml(getFieldTypeLabel(field.type))})</small></span>
       <button type="button" class="danger" data-remove-id="${field.id}">Quitar</button>
     `;
     refs.fieldsList.appendChild(li);
@@ -700,10 +777,18 @@ function openEditProductDialog(inventory, item) {
   refs.editItemName.value = item.name;
   refs.editItemSku.value = item.sku;
   refs.editItemQty.value = String(item.quantity);
-  refs.editItemPrice.value = String(item.price);
+  refs.editItemPrice.value = toAccountingNumber(item.price);
 
   renderDynamicFields(inventory.customFields, refs.editDynamicFieldsContainer, item.dynamicValues || {}, "edit");
   openDialog(refs.editProductDialog);
+}
+
+function prepareAddProductDialog(inventory) {
+  refs.addItemName.value = "";
+  refs.addItemSku.value = previewSku(inventory);
+  refs.addItemQty.value = "0";
+  refs.addItemPrice.value = "0.00";
+  renderDynamicFields(inventory.customFields, refs.addDynamicFieldsContainer, {}, "add");
 }
 
 function renderDynamicFields(fields, container, values, mode) {
@@ -713,13 +798,21 @@ function renderDynamicFields(fields, container, values, mode) {
   for (const field of fields) {
     const wrapper = document.createElement("div");
     wrapper.className = "field-box";
-
-    const inputType = field.type === "number" ? "number" : "text";
+    const inputType = field.type === "duration" ? "time" : field.type === "textarea" ? "textarea" : field.type;
     const value = values?.[field.id] ?? "";
-    wrapper.innerHTML = `
-      <label>${escapeHtml(field.name)}</label>
-      <input type="${inputType}" data-dyn-mode="${mode}" data-field-id="${field.id}" value="${escapeHtml(String(value))}" />
-    `;
+
+    if (inputType === "textarea") {
+      wrapper.innerHTML = `
+        <label>${escapeHtml(field.name)}</label>
+        <textarea data-dyn-mode="${mode}" data-field-id="${field.id}">${escapeHtml(String(value))}</textarea>
+      `;
+    } else {
+      wrapper.innerHTML = `
+        <label>${escapeHtml(field.name)}</label>
+        <input type="${inputType}" data-dyn-mode="${mode}" data-field-id="${field.id}" value="${escapeHtml(String(value))}" />
+      `;
+    }
+
     container.appendChild(wrapper);
   }
 }
@@ -727,7 +820,7 @@ function renderDynamicFields(fields, container, values, mode) {
 function collectDynamicValues(fields, container, mode) {
   const values = {};
   for (const field of fields) {
-    const input = container.querySelector(`input[data-dyn-mode="${mode}"][data-field-id="${field.id}"]`);
+    const input = container.querySelector(`[data-dyn-mode="${mode}"][data-field-id="${field.id}"]`);
     if (!input) {
       values[field.id] = "";
       continue;
@@ -981,9 +1074,33 @@ function normalizeCustomFields(fields) {
     .map((field) => ({
       id: field.id || crypto.randomUUID(),
       name: keepText(field.name, "Campo"),
-      type: field.type === "number" ? "number" : "text",
+      type: normalizeFieldType(field.type),
     }))
     .filter((field, index, arr) => arr.findIndex((entry) => entry.id === field.id) === index);
+}
+
+function normalizeFieldType(type) {
+  const allowed = new Set(["text", "number", "date", "tel", "time", "duration", "textarea"]);
+  return allowed.has(type) ? type : "text";
+}
+
+function getFieldTypeLabel(type) {
+  switch (type) {
+    case "number":
+      return "Número";
+    case "date":
+      return "Fecha";
+    case "tel":
+      return "Teléfono";
+    case "time":
+      return "Hora";
+    case "duration":
+      return "Duración";
+    case "textarea":
+      return "Texto largo";
+    default:
+      return "Texto";
+  }
 }
 
 function normalizeLabels(labels) {
@@ -1088,8 +1205,26 @@ function toCurrency(value) {
   return new Intl.NumberFormat("es-MX", {
     style: "currency",
     currency: "MXN",
+    currencySign: "accounting",
     minimumFractionDigits: 2,
   }).format(value);
+}
+
+function toAccountingNumber(value) {
+  return new Intl.NumberFormat("es-MX", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+function parseAccountingNumber(value) {
+  const clean = String(value || "")
+    .replace(/\s/g, "")
+    .replace(/\$/g, "")
+    .replace(/,/g, "")
+    .replace(/\((.*)\)/, "-$1");
+  const parsed = Number.parseFloat(clean);
+  return Number.isNaN(parsed) ? Number.NaN : parsed;
 }
 
 function keepText(value, fallback) {

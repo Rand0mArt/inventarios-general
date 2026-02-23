@@ -91,6 +91,14 @@ body::after {
   gap: 1rem;
 }
 
+.layout-grid.inventory-collapsed {
+  grid-template-columns: 1fr;
+}
+
+.layout-grid.inventory-collapsed #inventoryPanel {
+  display: none;
+}
+
 .glass {
   border: 1px solid var(--line);
   border-radius: 30px;
@@ -143,6 +151,18 @@ select {
   font: inherit;
   color: #eff6ff;
   background: rgba(22, 34, 79, 0.55);
+}
+
+textarea {
+  width: 100%;
+  min-height: 90px;
+  padding: 0.64rem 0.78rem;
+  border: 1px solid rgba(149, 192, 250, 0.25);
+  border-radius: 14px;
+  font: inherit;
+  color: #eff6ff;
+  background: rgba(22, 34, 79, 0.55);
+  resize: vertical;
 }
 
 input::placeholder {
@@ -310,12 +330,11 @@ button:disabled {
   align-items: center;
 }
 
-.item-form {
+.add-product-bar {
   margin: 0.8rem 0;
-  display: grid;
-  grid-template-columns: 1.5fr 1fr 1fr 1fr auto;
-  gap: 0.5rem;
-  align-items: end;
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
 }
 
 .dynamic-fields {
@@ -603,12 +622,13 @@ tbody tr.drop-target {
     flex-wrap: wrap;
   }
 
-  .item-form {
+  .dynamic-fields {
     grid-template-columns: 1fr;
   }
 
-  .dynamic-fields {
-    grid-template-columns: 1fr;
+  .add-product-bar {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .kpi-grid {
