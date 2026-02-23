@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Inventarios General</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+  </head>
+  <body>
+    <div class="bg-layer bg-layer-1"></div>
+    <div class="bg-layer bg-layer-2"></div>
+
+    <main class="app-shell">
+      <section class="layout-grid">
+        <aside class="panel glass">
+          <h2>Inventarios</h2>
+          <form id="inventoryForm" class="stack">
+            <label for="inventoryName">Nuevo inventario</label>
+            <div class="row">
+              <input id="inventoryName" type="text" placeholder="Ej. Almacén Central" required />
+              <input id="inventoryColor" type="color" value="#1f7a8c" />
+              <label class="file-chip" for="inventoryImage">Foto</label>
+              <input id="inventoryImage" type="file" accept="image/*" />
+              <button type="submit">Crear</button>
+            </div>
+          </form>
+          <ul id="inventoryList" class="inventory-list"></ul>
+        </aside>
+
+        <section class="panel glass content">
+          <div class="content-head">
+            <h2 id="activeInventoryName">Selecciona un inventario</h2>
+            <form id="inventorySettingsForm" class="inventory-settings">
+              <div>
+                <label for="editInventoryName">Nombre</label>
+                <input id="editInventoryName" type="text" placeholder="Nombre del inventario" />
+              </div>
+              <div>
+                <label for="editInventoryColor">Color</label>
+                <input id="editInventoryColor" type="color" />
+              </div>
+              <div>
+                <label for="editInventoryImage">Foto</label>
+                <input id="editInventoryImage" type="file" accept="image/*" />
+              </div>
+              <button type="submit">Guardar</button>
+              <button id="removeInventoryImageBtn" class="ghost-btn" type="button">Quitar foto</button>
+              <button id="deleteInventoryBtn" class="danger" type="button">Eliminar</button>
+            </form>
+          </div>
+
+          <div class="tools-row">
+            <input id="searchInput" type="search" placeholder="Buscar producto o SKU..." />
+            <button id="manageFieldsBtn" type="button">Campos personalizados</button>
+          </div>
+
+          <form id="itemForm" class="item-form">
+            <div>
+              <label for="itemName">Producto</label>
+              <input id="itemName" type="text" placeholder="Nombre del producto" required />
+            </div>
+            <div>
+              <label>SKU automático</label>
+              <p id="skuPreview" class="sku-preview">Se generará al agregar.</p>
+            </div>
+            <div>
+              <label for="itemQty">Cantidad</label>
+              <input id="itemQty" type="number" min="0" value="0" required />
+            </div>
+            <div>
+              <label for="itemPrice">Precio</label>
+              <input id="itemPrice" type="number" min="0" step="0.01" value="0" required />
+            </div>
+            <button type="submit">Agregar producto</button>
+          </form>
+          <div id="dynamicFieldsContainer" class="dynamic-fields"></div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>
+                    <span id="thProduct">Producto</span>
+                  </th>
+                  <th>
+                    <span id="thSku">SKU</span>
+                  </th>
+                  <th>
+                    <span id="thQuantity">Cantidad</span>
+                  </th>
+                  <th>
+                    <span id="thPrice">Precio</span>
+                  </th>
+                  <th>
+                    <span id="thTotal">Total</span>
+                  </th>
+                  <th>
+                    <span id="thActions">Acciones</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="itemsTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section class="panel glass dashboard">
+        <div class="dashboard-head">
+          <h2>Dashboard</h2>
+          <p id="dashboardInventoryTitle" class="subtitle">Métricas del inventario seleccionado.</p>
+        </div>
+        <div id="kpiWidgets" class="kpi-grid"></div>
+        <div class="dashboard-grid">
+          <article class="dash-card">
+            <h3>Valor por producto</h3>
+            <div id="valueChart" class="bar-chart"></div>
+          </article>
+          <article class="dash-card">
+            <h3>Unidades por producto</h3>
+            <div id="unitsChart" class="bar-chart"></div>
+          </article>
+          <article class="dash-card">
+            <h3>Top productos por valor</h3>
+            <div id="topProductsChart" class="bar-chart"></div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <template id="inventoryItemTemplate">
+      <li>
+        <button type="button" class="inventory-pill">
+          <span class="name"></span>
+          <span class="meta"></span>
+        </button>
+      </li>
+    </template>
+
+    <dialog id="editProductDialog" class="app-dialog">
+      <form id="editProductForm" class="dialog-form" method="dialog">
+        <h3>Editar producto</h3>
+        <input id="editProductId" type="hidden" />
+        <div>
+          <label for="editItemName">Nombre</label>
+          <input id="editItemName" type="text" required />
+        </div>
+        <div>
+          <label for="editItemSku">SKU</label>
+          <input id="editItemSku" type="text" required />
+        </div>
+        <div>
+          <label for="editItemQty">Cantidad</label>
+          <input id="editItemQty" type="number" min="0" required />
+        </div>
+        <div>
+          <label for="editItemPrice">Precio</label>
+          <input id="editItemPrice" type="number" min="0" step="0.01" required />
+        </div>
+        <div id="editDynamicFieldsContainer" class="dynamic-fields"></div>
+        <div class="dialog-actions">
+          <button id="deleteProductBtn" type="button" class="danger">Quitar</button>
+          <button id="cancelEditProductBtn" type="button" class="ghost-btn">Cancelar</button>
+          <button type="submit">Guardar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="tableConfigDialog" class="app-dialog">
+      <form id="tableConfigForm" class="dialog-form" method="dialog">
+        <h3>Configurar pestañas y campos</h3>
+        <p class="subtitle">Ajusta los encabezados según tipo de inventario.</p>
+        <div class="dialog-grid">
+          <div>
+            <label for="cfgProduct">Columna 1</label>
+            <input id="cfgProduct" type="text" />
+          </div>
+          <div>
+            <label for="cfgSku">Columna 2</label>
+            <input id="cfgSku" type="text" />
+          </div>
+          <div>
+            <label for="cfgQuantity">Columna 3</label>
+            <input id="cfgQuantity" type="text" />
+          </div>
+          <div>
+            <label for="cfgPrice">Columna 4</label>
+            <input id="cfgPrice" type="text" />
+          </div>
+          <div>
+            <label for="cfgTotal">Columna 5</label>
+            <input id="cfgTotal" type="text" />
+          </div>
+          <div>
+            <label for="cfgActions">Columna 6</label>
+            <input id="cfgActions" type="text" />
+          </div>
+        </div>
+        <h4>Campos personalizados</h4>
+        <div class="field-creator">
+          <input id="newFieldName" type="text" placeholder="Nombre del campo (ej. Estado)" />
+          <select id="newFieldType">
+            <option value="text">Texto</option>
+            <option value="number">Número</option>
+          </select>
+          <button id="addFieldBtn" type="button">Agregar campo</button>
+        </div>
+        <ul id="fieldsList" class="fields-list"></ul>
+        <div class="dialog-actions">
+          <button id="cancelConfigBtn" type="button" class="ghost-btn">Cancelar</button>
+          <button type="submit">Guardar configuración</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="app.js"></script>
+  </body>
+</html>
