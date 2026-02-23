@@ -21,27 +21,21 @@ En esta versión, cada usuario/dispositivo guarda su estado en la tabla `public.
 4. Rellena:
    - `SUPABASE_URL`
    - `SUPABASE_ANON_KEY`
+   - `OWNER_KEY` (misma clave en todos tus dispositivos para compartir/sincronizar inventarios)
 5. Abre la app y verifica sincronización.
 
 ## Despliegue en GitHub Pages
 
-1. Inicializa git:
+1. Crea un repositorio en GitHub.
+2. Conecta remoto y sube:
 ```bash
-git init
-git add .
-git commit -m "v1 + supabase realtime setup"
-```
-2. Crea un repositorio en GitHub.
-3. Conecta remoto y sube:
-```bash
-git branch -M main
 git remote add origin https://github.com/TU_USUARIO/TU_REPO.git
 git push -u origin main
 ```
-4. En GitHub:
+3. En GitHub:
    - `Settings` -> `Pages`
-   - Source: `Deploy from a branch`
-   - Branch: `main` / root
+   - Source: `GitHub Actions`
+4. Cada push a `main` desplegará automáticamente.
 
 Tu app quedará en:
 

@@ -1115,6 +1115,12 @@ function readFileAsDataURL(file) {
 }
 
 function getOrCreateOwnerKey() {
+  const configured = String(APP_CONFIG.OWNER_KEY || "").trim();
+  if (configured) {
+    localStorage.setItem(OWNER_KEY_STORAGE, configured);
+    return configured;
+  }
+
   const existing = localStorage.getItem(OWNER_KEY_STORAGE);
   if (existing) return existing;
 
