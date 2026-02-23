@@ -9,7 +9,7 @@ const DEFAULT_LABELS = {
   total: "Total",
   actions: "Acciones",
 };
-const CLOUD_TABLE = "app_states";
+const CLOUD_TABLE = "inventarios_general_states";
 const OWNER_KEY_STORAGE = "inventarios_owner_key_v1";
 const CLIENT_ID = crypto.randomUUID();
 const APP_CONFIG = window.APP_CONFIG || {};

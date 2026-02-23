@@ -1,6 +1,6 @@
 create extension if not exists pgcrypto;
 
-create table if not exists public.app_states (
+create table if not exists public.inventarios_general_states (
   id uuid primary key default gen_random_uuid(),
   owner_key text not null unique,
   payload jsonb not null default '{}'::jsonb,
@@ -8,33 +8,33 @@ create table if not exists public.app_states (
   updated_at timestamptz not null default now()
 );
 
-alter table public.app_states enable row level security;
+alter table public.inventarios_general_states enable row level security;
 
-drop policy if exists "app_states_select" on public.app_states;
-create policy "app_states_select"
-on public.app_states
+drop policy if exists "inventarios_general_states_select" on public.inventarios_general_states;
+create policy "inventarios_general_states_select"
+on public.inventarios_general_states
 for select
 to anon, authenticated
 using (true);
 
-drop policy if exists "app_states_insert" on public.app_states;
-create policy "app_states_insert"
-on public.app_states
+drop policy if exists "inventarios_general_states_insert" on public.inventarios_general_states;
+create policy "inventarios_general_states_insert"
+on public.inventarios_general_states
 for insert
 to anon, authenticated
 with check (true);
 
-drop policy if exists "app_states_update" on public.app_states;
-create policy "app_states_update"
-on public.app_states
+drop policy if exists "inventarios_general_states_update" on public.inventarios_general_states;
+create policy "inventarios_general_states_update"
+on public.inventarios_general_states
 for update
 to anon, authenticated
 using (true)
 with check (true);
 
-drop policy if exists "app_states_delete" on public.app_states;
-create policy "app_states_delete"
-on public.app_states
+drop policy if exists "inventarios_general_states_delete" on public.inventarios_general_states;
+create policy "inventarios_general_states_delete"
+on public.inventarios_general_states
 for delete
 to anon, authenticated
 using (true);
@@ -46,9 +46,9 @@ begin
     from pg_publication_tables
     where pubname = 'supabase_realtime'
       and schemaname = 'public'
-      and tablename = 'app_states'
+      and tablename = 'inventarios_general_states'
   ) then
-    alter publication supabase_realtime add table public.app_states;
+    alter publication supabase_realtime add table public.inventarios_general_states;
   end if;
 end
 $$;

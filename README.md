@@ -11,12 +11,12 @@ La práctica correcta es:
 - 1 base de datos PostgreSQL
 - Muchas filas/tablas dentro de esa base
 
-En esta versión, cada usuario/dispositivo guarda su estado en la tabla `public.app_states` usando `owner_key`.
+En esta versión, cada usuario/dispositivo guarda su estado en la tabla `public.inventarios_general_states` usando `owner_key`.
 
 ## Configurar Supabase
 
-1. Crea un proyecto en Supabase.
-2. En SQL Editor, ejecuta `supabase/schema.sql`.
+1. Usa uno de tus proyectos Supabase existentes (no necesitas crear otro).
+2. En SQL Editor de ese proyecto, ejecuta `supabase/schema.sql`.
 3. Copia `config.example.js` a `config.js`.
 4. Rellena:
    - `SUPABASE_URL`
